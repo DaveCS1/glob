@@ -38,9 +38,9 @@ namespace GlobExpressions.Tests
         [Fact]
         public void ParseWindowsRoot()
         {
-            var scanner = new Scanner(@"C:\*.txt");
+            var scanner = new Scanner(@"C:/*.txt");
             AssertToken(TokenKind.WindowsRoot, "C:", scanner.Scan());
-            AssertToken(TokenKind.PathSeparator, "\\", scanner.Scan());
+            AssertToken(TokenKind.PathSeparator, "/", scanner.Scan());
             AssertToken(TokenKind.Wildcard, "*", scanner.Scan());
             AssertToken(TokenKind.Identifier, ".txt", scanner.Scan());
             AssertToken(TokenKind.EOT, "", scanner.Scan());

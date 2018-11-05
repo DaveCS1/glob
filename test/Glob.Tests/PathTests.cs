@@ -61,7 +61,7 @@ namespace GlobExpressions.Tests
         [Fact]
         public void WindowsRootWithDirectoryWildcard()
         {
-            Assert.Collection(GetGlobForPattern(@"C:\**\*.txt"),
+            Assert.Collection(GetGlobForPattern(@"C:/**/*.txt"),
                 s => Assert.Equal(@"C:\Users\Kevin\Desktop\notes.txt", s));
         }
 

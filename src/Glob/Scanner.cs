@@ -13,16 +13,25 @@ namespace GlobExpressions
         private int _currentCharacter;
         private int _startIndex;
         private TokenKind _currentKind;
+        private readonly StringBuilder _spelling;
 
         public Scanner(string source)
         {
             this._source = source;
             this._sourceIndex = 0;
             this._startIndex = 0;
+            _spelling = new StringBuilder();
             SetCurrentCharacter();
         }
 
         public void TakeIt()
+        {
+            _spelling.Append((char)_currentCharacter);
+
+            SkipIt();
+        }
+
+        public void SkipIt()
         {
             this._sourceIndex++;
 
@@ -50,7 +59,8 @@ namespace GlobExpressions
         {
             this._currentKind = this.ScanToken();
 
-            var token = new Token(_currentKind, _source, _startIndex, _sourceIndex - _startIndex);
+            var token = new Token(_currentKind, _spelling.ToString());
+            _spelling.Clear();
 
             _startIndex = _sourceIndex;
 
@@ -64,16 +74,11 @@ namespace GlobExpressions
 
             var current = (char)_currentCharacter;
 
-            if (char.IsLetter(current))
+            if (char.IsLetter(current) && _sourceIndex == 0 && this.PeekChar() == ':')
             {
-                if (_sourceIndex == 0 && this.PeekChar() == ':')
-                {
-                    TakeIt(); // letter
-                    TakeIt(); // :
-                    return TokenKind.WindowsRoot;
-                }
-
-                return TakeIdentifier();
+                TakeIt(); // letter
+                TakeIt(); // :
+                return TokenKind.WindowsRoot;
             }
 
             if (IsIdentifierCharacter(current))
@@ -92,6 +97,24 @@ namespace GlobExpressions
                     }
 
                     return TokenKind.Wildcard;
+
+                case '\\':
+                    this.TakeIt();
+                    switch (this._currentCharacter)
+                    {
+                        case '*':
+                        case '?':
+                        case '{':
+                        case '}':
+                        case '[':
+                        case ']':
+                        case ' ':
+                            this.TakeIt(); // escaped char
+                            return TokenKind.EscapeSequence;
+
+                        default:
+                            return TokenKind.Identifier;
+                    }
 
                 case '?':
                     this.TakeIt();
@@ -122,7 +145,6 @@ namespace GlobExpressions
                     return TokenKind.LiteralSetEnd;
 
                 case '/':
-                case '\\':
                     this.TakeIt();
                     return TokenKind.PathSeparator;
 
@@ -133,16 +155,21 @@ namespace GlobExpressions
 
         private TokenKind TakeIdentifier()
         {
-            while (IsIdentifierCharacter((char)this._currentCharacter))
+            while (true)
             {
-                this.TakeIt();
+                var c = (char)this._currentCharacter;
+                if (IsIdentifierCharacter(c))
+                {
+                    this.TakeIt();
+                    continue;
+                }
+
+                break;
             }
 
             return TokenKind.Identifier;
         }
 
-        private static bool IsIdentifierCharacter(char c) => char.IsLetter(c) || IsNumeric(c) || "~_$".Contains(c);
-
-        private static bool IsNumeric(char c) => char.IsDigit(c) || c == '.' || c == '-';
+        private static bool IsIdentifierCharacter(char c) => char.IsLetterOrDigit(c) || " .-~_$".Contains(c);
     }
 }

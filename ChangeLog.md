@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+### Changed
+- BREAKING CHANGE: Patterns may not include '\' any more as path seperators
+  instead, '/' should always be used and '\' is now available for escaping characters
+
 ### Fixed
 - Issue #34: Updated scanner to support `~` and `$` in Glob patterns
 

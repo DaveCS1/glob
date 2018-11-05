@@ -36,28 +36,43 @@ namespace GlobExpressions
             this._currentToken = this._scanner.Scan();
         }
 
-        private Identifier ParseIdentifier()
+        private Identifier ParseIdentifier(bool inLiteralSet)
         {
-            if (this._currentToken.Kind == TokenKind.Identifier)
+            bool IdentToken() => this._currentToken.Kind == TokenKind.Identifier ||
+                                 this._currentToken.Kind == TokenKind.EscapeSequence ||
+            (!inLiteralSet && _currentToken.Kind == TokenKind.LiteralSetSeperator);
+
+            var sb = new StringBuilder();
+            if (!IdentToken())
+                throw new GlobPatternException("Unable to parse Identifier");
+
+            sb.Append(_currentToken.Kind == TokenKind.EscapeSequence
+                ? this._currentToken.Spelling.Substring(1)
+                : this._currentToken.Spelling);
+            this.AcceptIt();
+
+            while (IdentToken())
             {
-                var identifier = new Identifier(this._currentToken.Spelling);
+                sb.Append(_currentToken.Kind == TokenKind.EscapeSequence
+                    ? this._currentToken.Spelling.Substring(1)
+                    : this._currentToken.Spelling);
+
                 this.AcceptIt();
-                return identifier;
             }
 
-            throw new GlobPatternException("Unable to parse Identifier");
+            return new Identifier(sb.ToString());
         }
 
         private LiteralSet ParseLiteralSet()
         {
             var items = new List<Identifier>();
             this.Accept(TokenKind.LiteralSetStart);
-            items.Add(this.ParseIdentifier());
+            items.Add(this.ParseIdentifier(true));
 
             while (this._currentToken.Kind == TokenKind.LiteralSetSeperator)
             {
                 this.AcceptIt();
-                items.Add(this.ParseIdentifier());
+                items.Add(this.ParseIdentifier(true));
             }
             this.Accept(TokenKind.LiteralSetEnd);
             return new LiteralSet(items);
@@ -73,6 +88,7 @@ namespace GlobExpressions
                 inverted = true;
             }
             var sb = new StringBuilder();
+            // first token is special and we allow more things like ] or [ at the beginning
             switch (_currentToken.Kind)
             {
                 case TokenKind.CharacterWildcard:
@@ -80,6 +96,7 @@ namespace GlobExpressions
                 case TokenKind.CharacterSetStart:
                 case TokenKind.CharacterSetEnd:
                 case TokenKind.Identifier:
+                case TokenKind.EscapeSequence:
                 case TokenKind.PathSeparator:
                     sb.Append(_currentToken.Spelling);
                     AcceptIt();
@@ -100,6 +117,7 @@ namespace GlobExpressions
                     case TokenKind.CharacterWildcard:
                     case TokenKind.Wildcard:
                     case TokenKind.Identifier:
+                    case TokenKind.EscapeSequence:
                     case TokenKind.PathSeparator:
                         sb.Append(_currentToken.Spelling);
                         AcceptIt();
@@ -135,8 +153,9 @@ namespace GlobExpressions
         {
             switch (this._currentToken.Kind)
             {
+                case TokenKind.EscapeSequence:
                 case TokenKind.Identifier:
-                    return this.ParseIdentifier();
+                    return this.ParseIdentifier(false);
 
                 case TokenKind.CharacterSetStart:
                     return this.ParseCharacterSet();
@@ -176,6 +195,7 @@ namespace GlobExpressions
                     case TokenKind.Identifier:
                     case TokenKind.CharacterSetStart:
                     case TokenKind.LiteralSetStart:
+                    case TokenKind.EscapeSequence:
                     case TokenKind.CharacterWildcard:
                     case TokenKind.Wildcard:
                         items.Add(this.ParseSubSegment());
@@ -253,6 +273,7 @@ namespace GlobExpressions
                 case TokenKind.WindowsRoot:
                 case TokenKind.PathSeparator:
                 case TokenKind.Identifier:
+                case TokenKind.EscapeSequence:
                 case TokenKind.CharacterSetStart:
                 case TokenKind.LiteralSetStart:
                 case TokenKind.CharacterWildcard:
